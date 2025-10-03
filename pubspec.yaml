@@ -4,13 +4,10 @@ version: 1.0.0
 # repository: https://github.com/my_org/my_repo
 
 environment:
-  sdk: ^3.9.2
+  sdk: '>=3.9.0 <4.0.0'
+  flutter: '3.35.4'
 
 dependencies:
   analyzer:
   analyzer_plugin:
   custom_lint_builder:
-
-dev_dependencies:
-  lints: ^6.0.0
-  test: ^1.25.6
