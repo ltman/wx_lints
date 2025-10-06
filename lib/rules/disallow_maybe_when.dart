@@ -33,7 +33,10 @@ class DisallowMaybeWhen extends DartLintRule {
         return;
       }
       final className = enclosing.extendedType.element?.name;
-      if (className == null || !className.startsWith('Fragment\$')) {
+      if (className == null ||
+           !className.startsWith(r'Fragment$') &&
+           !className.startsWith(r'Query$') &&
+           !className.startsWith(r'Mutation$')) {
         return;
       }
       reporter.atNode(node, code);
