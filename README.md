@@ -1,39 +1,64 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# wx_lints
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages). 
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages). 
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+A collection of custom lint rules for Dart and Flutter projects, designed to enforce best practices and prevent common issues.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+This package provides the following custom lint rules:
+
+### `disallow_maybe_when`
+
+This rule disallows the use of the `maybeWhen` method on generated GraphQL fragment classes. Using `when` instead of `maybeWhen` ensures that all possible states are handled.
+
+**Example**
+
+Let's assume you have a fragment that can be one of two types: `TypeA` or `TypeB`.
+
+With `maybeWhen`, you might handle only one case and forget about the others:
+
+```dart
+myFragment.maybeWhen(
+  onTypeA: (data) => print('Data: $data'),
+  orElse: () => print('Something else'), 
+);
+```
+
+This rule encourages using `when` to ensure all cases are handled explicitly. This makes your code more robust against changes in your GraphQL schema.
+
+The lint rule provides a quick fix to replace `maybeWhen` with `when`.
+
+```dart
+myFragment.when(
+onTypeA: (data) => print('Data: $data'),
+onTypeB: (data) => print('This is TypeB'),
+orElse: () => print('Something else'),
+);
+```
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+To use this package, add `wx_lints` and `custom_lint` as a dev dependencies in your `pubspec.yaml` file:
+
+```yaml
+dev_dependencies:
+  custom_lint:
+  wx_lints:
+```
+
+Next, enable the custom lint in your `analysis_options.yaml` file:
+
+```yaml
+analyzer:
+  plugins:
+    - custom_lint
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
+To run the linter, execute the following command in your terminal:
 
-```dart
-const like = 'sample';
+```sh
+dart run custom_lint
 ```
 
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
+This will analyze your code and report any violations of the custom lint rules.
