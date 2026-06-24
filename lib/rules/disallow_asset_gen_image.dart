@@ -9,7 +9,7 @@ class DisallowAssetGenImage extends DartLintRule {
           name: 'disallow_asset_gen_image',
           problemMessage:
               'Avoid calling .image() on AssetGenImage directly.'
-              'Use .imageTintForeground() to apply the foreground color, '
+              'Use .imageTint() to apply the foreground color, '
               'or .imageNoTint() if the image should render without tinting.',
           errorSeverity: error.DiagnosticSeverity.WARNING,
         ),
