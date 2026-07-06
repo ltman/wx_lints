@@ -7,12 +7,15 @@ import 'package:analyzer/source/source_range.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_dart.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-class DisallowMaybeWhen extends DartLintRule {
-  const DisallowMaybeWhen()
+import 'package:wx_lints/src/asset_gen_image_utils.dart';
+
+class DisallowTintableImageNoTint extends DartLintRule {
+  const DisallowTintableImageNoTint()
     : super(
         code: const LintCode(
-          name: 'disallow_maybe_when',
-          problemMessage: 'Usage of the maybeWhen(...) method is not allowed.',
+          name: 'disallow_tintable_image_no_tint',
+          problemMessage:
+              'Tintable assets must not use imageNoTint(); use imageTint() instead.',
           errorSeverity: DiagnosticSeverity.WARNING,
         ),
       );
@@ -25,18 +28,13 @@ class DisallowMaybeWhen extends DartLintRule {
   ) {
     context.registry.addMethodInvocation((MethodInvocation node) {
       final Element? element = node.methodName.element;
-      if (element == null || element.name != 'maybeWhen') {
+      if (element == null || element.name != 'imageNoTint') {
         return;
       }
-      final enclosing = element.enclosingElement;
-      if (enclosing is! ExtensionElement) {
+      if (!isAssetGenImageExtensionMember(element)) {
         return;
       }
-      final className = enclosing.extendedType.element?.name;
-      if (className == null ||
-           !className.startsWith(r'Fragment$') &&
-           !className.startsWith(r'Query$') &&
-           !className.startsWith(r'Mutation$')) {
+      if (!assetChainContainsSegment(node.target, 'tintable')) {
         return;
       }
       reporter.atNode(node, code);
@@ -44,10 +42,10 @@ class DisallowMaybeWhen extends DartLintRule {
   }
 
   @override
-  List<Fix> getFixes() => [_MaybeWhenFix()];
+  List<Fix> getFixes() => [_ImageNoTintFix()];
 }
 
-class _MaybeWhenFix extends DartFix {
+class _ImageNoTintFix extends DartFix {
   @override
   void run(
     CustomLintResolver resolver,
@@ -60,13 +58,13 @@ class _MaybeWhenFix extends DartFix {
       if (!node.sourceRange.intersects(analysisError.sourceRange)) return;
 
       final changeBuilder = reporter.createChangeBuilder(
-        message: 'Use when(...) instead',
+        message: 'Use imageTint() instead',
         priority: 100,
       );
 
       changeBuilder.addDartFileEdit((DartFileEditBuilder builder) {
         final SourceRange sourceRange = node.methodName.sourceRange;
-        builder.addSimpleReplacement(sourceRange, 'when');
+        builder.addSimpleReplacement(sourceRange, 'imageTint');
       });
     });
   }
