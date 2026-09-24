@@ -86,28 +86,132 @@ Where the asset chain unambiguously refers to a `static` or `tintable` asset, th
 
 ## Getting started
 
-To use this package, add `wx_lints` and `custom_lint` as a dev dependencies in your `pubspec.yaml` file:
+`wx_lints` is a [Dart analyzer plugin](https://dart.dev/tools/analyzer-plugins).
+It requires Dart 3.10 or later and does **not** need `custom_lint`.
+
+Enable it from the consuming project's `analysis_options.yaml`. Note that
+`plugins` is a **top-level** key -- it is *not* nested under `analyzer:`:
 
 ```yaml
-dev_dependencies:
-  custom_lint:
+plugins:
   wx_lints:
+    path: ../wx_lints
 ```
 
-Next, enable the custom lint in your `analysis_options.yaml` file:
-
-```yaml
-analyzer:
-  plugins:
-    - custom_lint
-```
+The plugin does not need to be listed in `pubspec.yaml`; the analysis server
+resolves it from the `plugins` entry directly.
 
 ## Usage
 
-To run the linter, execute the following command in your terminal:
+All five rules are registered as **warning rules**, so they are enabled by
+default and reported by the regular analyzer:
 
 ```sh
-dart run custom_lint
+dart analyze
 ```
 
-This will analyze your code and report any violations of the custom lint rules.
+```sh
+flutter analyze
+```
+
+They also appear live in any IDE backed by the Dart Analysis Server, along with
+their quick fixes.
+
+### Disabling a rule
+
+Warning rules are on by default. Turn individual rules off under `diagnostics`:
+
+```yaml
+plugins:
+  wx_lints:
+    path: ../wx_lints
+    diagnostics:
+      prefer_lowercase_hex_color: false
+```
+
+### Suppressing a single report
+
+Ignore comments must be **prefixed with the plugin name**:
+
+```dart
+// ignore: wx_lints/disallow_maybe_when
+myFragment.maybeWhen(orElse: () {});
+```
+
+```dart
+// ignore_for_file: wx_lints/prefer_lowercase_hex_color
+```
+
+A bare `// ignore: disallow_maybe_when` (the old `custom_lint` form) does
+**not** suppress these diagnostics.
+
+### Quick fixes
+
+Every rule ships a quick fix, offered through the IDE's lightbulb / "Quick Fix"
+action.
+
+Four of the five also offer a **"... in file"** variant that fixes every
+occurrence of that diagnostic in the current file at once:
+
+| Rule | Fix-all-in-file |
+| --- | --- |
+| `disallow_maybe_when` | Use when(...) in file |
+| `prefer_lowercase_hex_color` | Lowercase hex digits in file |
+| `disallow_static_image_tint` | Use imageNoTint() in file |
+| `disallow_tintable_image_no_tint` | Use imageTint() in file |
+| `disallow_direct_asset_image` | -- (replacement varies per call site) |
+
+The in-file variant only appears when the file contains **two or more** reports
+of the same rule.
+
+`dart fix --apply` does **not** apply these. Analyzer plugins expose only
+`edit.getFixes` and `edit.getAssists`, both of which are point queries; the
+`edit.bulkFixes` request that `dart fix` uses has no plugin handler. Note that
+this is a capability regression from `custom_lint`, which supported
+`dart run custom_lint --fix`; there is currently no equivalent.
+
+## Developing this plugin
+
+The plugin entry point is `lib/main.dart`, which must expose a top-level
+`plugin` variable. Rules and their fixes live in `lib/src/rules/`, and each one
+is registered in `WxLintsPlugin.register`.
+
+`print` does not work inside plugin code, since the plugin runs in a separate
+isolate. If the plugin misbehaves, check the analyzer diagnostics pages
+(**Dart: Open Analyzer Diagnostics** in VS Code) for the plugin's status and any
+crash output.
+
+### Testing
+
+Each rule has a test suite under `test/rules/`, built on `package:analyzer_testing`'s
+`AnalysisRuleTest` harness. It resolves a snippet of Dart source in-memory,
+registers the rule under test, and asserts exactly which diagnostics are
+reported (and at which offsets):
+
+```dart
+@reflectiveTest
+class DisallowMaybeWhenTest extends AnalysisRuleTest {
+  @override
+  void setUp() {
+    rule = DisallowMaybeWhen();
+    super.setUp();
+  }
+
+  Future<void> test_flags_fragment_maybeWhen() async {
+    await assertDiagnostics(content, [lint(offset, length)]);
+  }
+}
+```
+
+Run the suite with:
+
+```sh
+dart test
+```
+
+Tests cover each rule's detection logic (positive, negative, and edge cases)
+against minimal local stub classes, so they don't depend on real Flutter or
+GraphQL codegen output. They don't cover the exact rewritten output of each
+quick fix, since there's no stable public harness for invoking a
+`ResolvedCorrectionProducer` outside the Dart SDK's own analysis_server test
+infrastructure.
